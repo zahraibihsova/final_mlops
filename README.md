@@ -1,3 +1,46 @@
+📦 Getting Started
+Prerequisites
+
+Docker & Docker Compose installed
+
+Python 3.13+ (for local testing without containers)
+
+-How to run
+1. Clone the repo:
+git clone <your-repo-url>
+cd <repo-root>
+2. Start containers:
+docker-compose up -d --build
+Access services:
+
+Frontend → http://localhost:8501 
+
+Backend Swagger → http://localhost:8000/docs (http://127.0.0.1:8000/docs#/)
+
+
+Usage
+
+Upload CSV or Excel files in the frontend
+
+Frontend calls backend at http://backend:8000/predict
+
+Receive prediction results in real-time
+
+
+CI/CD Deployment
+
+GitHub Actions self-hosted runner on EC2
+
+Docker Compose for automated container orchestration
+
+Jobs include:
+
+Code linting with Ruff
+
+Docker image build
+
+Deployment to EC2 containers
+
 # FINAL_MLOPS
 
 ![Build Status](https://github.com/zahraibihsova/final_mlops/actions/workflows/ci-build.yaml/badge.svg)
