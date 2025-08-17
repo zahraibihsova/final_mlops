@@ -17,7 +17,7 @@ jobs:
       - name: Setup uv (+ Python 3.13)
         uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
+          python-version: "3.11"
           enable-cache: true
 
       # Lint with Ruff via uvx; show GitHub annotations on PRs
