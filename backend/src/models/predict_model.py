@@ -1,7 +1,3 @@
-import warnings
-
-warnings.filterwarnings("ignore")
-
 import gzip
 import io
 import os
@@ -10,7 +6,8 @@ from typing import Iterable, Optional
 
 import pandas as pd
 
-# Root of the repo (two levels up from this file)
+import warnings
+warnings.filterwarnings("ignore")
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 
 

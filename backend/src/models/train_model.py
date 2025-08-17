@@ -1,7 +1,3 @@
-import warnings
-
-warnings.filterwarnings("ignore")
-
 import gzip
 import os
 import pickle
@@ -15,6 +11,10 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
+
+import warnings
+warnings.filterwarnings("ignore")
+
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 
