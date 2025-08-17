@@ -1,7 +1,3 @@
-import warnings
-
-warnings.filterwarnings("ignore")
-
 import gzip
 import io
 import os
@@ -9,8 +5,19 @@ import pickle
 from typing import Iterable, Optional
 
 import pandas as pd
+from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
 
-# Root of the repo (two levels up from this file)
+import warnings
+warnings.filterwarnings("ignore")
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 
 
