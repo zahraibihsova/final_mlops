@@ -1,93 +1,82 @@
-import gzip
-import os
-import pickle
-import pickletools
+import sys
+from pathlib import Path
 
-import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.impute import SimpleImputer
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
+# Fix Python path for 'src'
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-import warnings
-warnings.filterwarnings("ignore")
+import logging
+import traceback
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from src.models.predict_model import main as predict_main
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+BAKU_TZ = timezone(timedelta(hours=4))
 
+app = FastAPI(
+    title="FastAPI Backend server for ML project",
+    description="REST API for ML project",
+    version="1.0.0",
+    docs_url="/docs",
+)
 
-def save_model(filename: str, model: object):
-    """
-    Function saves model into pickle object.
-    """
-    file_path = os.path.join(ROOT_DIR, "models", filename)
-    with gzip.open(file_path, "wb") as f:
-        pickled = pickle.dumps(model)
-        optimized_pickle = pickletools.optimize(pickled)
-        f.write(optimized_pickle)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+@app.get("/health")
+def health() -> Dict[str, Any]:
+    utc_time = datetime.now(timezone.utc).isoformat()
+    baku_time = datetime.now(BAKU_TZ).isoformat()
+    return {"status": "healthy", "utc_time": utc_time, "baku_time": baku_time}
 
-def main():
-    file_path = os.path.join(ROOT_DIR, "data", "processed", "Titanic-Dataset.csv")
-    df = pd.read_csv(file_path)
-    features = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"]
-    target = "Survived"
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)) -> Dict[str, Any]:
+    start_time = datetime.now()
+    try:
+        suffix = Path(file.filename).suffix.lower()
+        if suffix not in {".csv", ".xlsx", ".xls"}:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid file format. Please upload CSV or Excel files only.",
+            )
 
-    df = df[features + [target]].copy()
-    X = df[features]
+        file_content = await file.read()
+        if not file_content:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-    y = df[target].astype(int)
+        logger.info(f"Processing file: {file.filename} ({len(file_content)} bytes)")
+        predictions_list = predict_main(file_content, filename=file.filename)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=42, stratify=y
-    )
+        try:
+            predictions_list = list(predictions_list)
+        except TypeError:
+            predictions_list = [p for p in predictions_list]
 
-    numeric_features = ["Age", "SibSp", "Parch", "Fare"]
-    categorical_features = ["Pclass", "Sex", "Embarked"]
+        processing_time = (datetime.now() - start_time).total_seconds()
+        return {
+            "status": "success",
+            "message": "Predictions generated successfully",
+            "data": {
+                "predictions": predictions_list,
+                "num_predictions": len(predictions_list),
+                "processing_time_seconds": round(processing_time, 3),
+            },
+        }
 
-    numeric_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="median")),
-        ]
-    )
-
-    categorical_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore")),
-        ]
-    )
-
-    preprocess = ColumnTransformer(
-        transformers=[
-            ("num", numeric_transformer, numeric_features),
-            ("cat", categorical_transformer, categorical_features),
-        ]
-    )
-
-    rf = RandomForestClassifier(
-        n_estimators=200, max_depth=None, random_state=42, n_jobs=-1
-    )
-
-    model = Pipeline(steps=[("preprocess", preprocess), ("rf", rf)])
-
-    # Train model
-    model.fit(X_train, y_train)
-
-    # Evaluate before saving
-    y_pred = model.predict(X_test)
-    acc = accuracy_score(y_test, y_pred)
-    print(f"Test accuracy (before save): {acc:.3f}")
-    print(classification_report(y_test, y_pred))
-
-    # Serialize (save) the trained pipeline
-    model_path = "titanic_rf.pkl.gz"
-    save_model(model_path, model)
-    print(f"Model saved to: {model_path}")
-
-
-if __name__ == "__main__":
-    main()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error during prediction: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error during prediction: {str(e)}"
+        )
