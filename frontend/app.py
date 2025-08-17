@@ -7,11 +7,12 @@ import streamlit as st
 
 # Page configuration
 st.set_page_config(
-    page_title="DataMinds'25 - ML Predictor",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    page_icon="🤖",
+    page_title="Best ML Predictor",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+    page_icon="💅🏼",
 )
+
 
 
 def detect_mime(filename: str) -> str:
